@@ -17,15 +17,49 @@ app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
 
+```python
 def get_news(keyword="삼성전자", limit=10):
-
     rss_url = (
         "https://news.google.com/rss/search?q="
         + quote_plus(keyword)
         + "&hl=ko&gl=KR&ceid=KR:ko"
     )
 
-    feed = feedparser.parse(rss_url)
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/140.0.0.0 Safari/537.36"
+        ),
+        "Accept": (
+            "application/rss+xml, application/xml, "
+            "text/xml, text/html;q=0.9, */*;q=0.8"
+        ),
+    }
+
+    print("NEWS URL:", rss_url)
+
+    response = requests.get(
+        rss_url,
+        headers=headers,
+        timeout=15,
+        allow_redirects=True,
+    )
+
+    print("NEWS STATUS:", response.status_code)
+    print("NEWS FINAL URL:", response.url)
+    print("NEWS CONTENT TYPE:", response.headers.get("content-type"))
+    print("NEWS BYTES:", len(response.content))
+
+    response.raise_for_status()
+
+    feed = feedparser.parse(response.content)
+
+    print("NEWS FEED BOZO:", feed.bozo)
+    print("NEWS ENTRIES:", len(feed.entries))
+
+    if feed.bozo:
+        print("NEWS FEED ERROR:", getattr(feed, "bozo_exception", None))
 
     articles = []
 
@@ -54,15 +88,11 @@ def get_news(keyword="삼성전자", limit=10):
     return articles
 
 @app.get("/")
-def homepage(request: Request, q: str = "삼성전자 AI"):
+def homepage(request: Request, q: str = "삼성전자"):
 
-    q = q.strip()[:100] or "삼성전자 AI"
+    q = q.strip()[:100] or "삼성전자"
 
-    try:
-        articles = get_news(keyword=q, limit=30)
-    except Exception as e:
-        print("News fetch error:", e)
-        articles = []
+    articles = get_news(keyword=q, limit=30)
 
     return templates.TemplateResponse(
         request=request,
@@ -70,7 +100,7 @@ def homepage(request: Request, q: str = "삼성전자 AI"):
         context={
             "articles": articles,
             "q": q,
-            "trending": get_trending(),   # <-- add this
+            "trending": get_trending(),
         }
     )
 
