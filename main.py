@@ -17,7 +17,6 @@ app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
 
-```python
 def get_news(keyword="삼성전자", limit=10):
     rss_url = (
         "https://news.google.com/rss/search?q="
