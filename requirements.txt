@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+jinja2
+requests
+feedparser
+beautifulsoup4
+deep-translator
+trafilatura

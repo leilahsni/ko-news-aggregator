@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Korean News Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Gothic+A1:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#eee2d0; --paper:#fff9ee; --ink:#2b0a07; --black:#2b0a07;
+          --red:#c8332b; --rust:#c4510f; --gold:#de9e0f; --tan:#dba67f; --salmon:#d2836b;
+          --sky:#3e97ae; --blue:#0575a6; --maroon:#7b0d07; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Gothic A1",sans-serif; font-size:1.05rem; line-height:1.6; }
+  h1,h2 { font-family:"Bagel Fat One","Gothic A1",sans-serif; font-weight:400; margin:0; line-height:1.15; }
+  .hidden { display:none !important; }
+
+  /* Hero: giant Hangul with loose geometric shapes */
+  .hero { position:relative; overflow:hidden; padding:4rem 1.5rem 3.5rem; }
+  .inner { position:relative; z-index:2; max-width:1080px; margin:0 auto; }
+  .hero h1 { font-size:clamp(6rem,24vw,15rem); line-height:.95; color:var(--red);
+             text-shadow:.04em .04em 0 var(--ink); margin-bottom:.5rem; }
+  .hero p.lede { font-size:1.35rem; font-weight:700; max-width:28ch; margin:0 0 2rem; }
+  .shape { position:absolute; z-index:1; }
+  .s1 { width:min(38vw,300px); aspect-ratio:1; border-radius:50%; right:6%; top:-6%; background:var(--blue); }
+  .s2 { width:min(22vw,170px); aspect-ratio:1; background:var(--gold); right:22%; top:38%; transform:rotate(14deg); }
+  .s3 { width:min(26vw,200px); aspect-ratio:1; background:var(--salmon); right:2%; top:52%;
+        clip-path:polygon(50% 0,100% 100%,0 100%); }
+  .s4 { width:min(30vw,240px); height:28px; background:var(--ink); right:30%; top:12%; transform:rotate(-24deg); border-radius:14px; }
+
+  /* Search */
+  .search { display:flex; gap:.75rem; max-width:680px; }
+  .search input { flex:1; min-width:0; font:inherit; font-size:1.2rem; padding:.85rem 1.2rem; color:var(--ink);
+    background:var(--paper); border:3px solid var(--ink); border-radius:999px; box-shadow:5px 5px 0 var(--gold); outline:none; }
+  .search input:focus { box-shadow:5px 5px 0 var(--blue); }
+  .search button, .expand { font-family:"Gothic A1",sans-serif; font-weight:700; font-size:1rem; cursor:pointer;
+    background:var(--ink); color:var(--paper); border:3px solid var(--ink); border-radius:999px; padding:.6rem 1.4rem;
+    transition:transform .1s, box-shadow .1s; }
+  .search button { background:var(--ink); color:var(--paper); box-shadow:4px 4px 0 var(--gold); }
+  .search button:active, .expand:active { transform:translate(4px,4px); box-shadow:0 0 0 transparent !important; }
+  .search button:focus-visible, .expand:focus-visible, a.read:focus-visible, .search input:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
+
+  /* Colour-block articles */
+  main { max-width:1080px; margin:0 auto; padding:2rem 1.5rem 6rem; display:grid; gap:1.75rem;
+         grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr)); align-items:start; }
+  .card { position:relative; min-width:0; color:var(--ink); padding:1.75rem 1.5rem 1.5rem; border:3px solid var(--ink);
+          border-radius:22px; box-shadow:8px 8px 0 var(--ink); }
+  .c0 { background:var(--gold); } .c1 { background:var(--blue); } .c2 { background:var(--tan); }
+  .c3 { background:var(--red); }  .c4 { background:var(--sky); }
+  .c1, .c3 { color:var(--paper); }
+  .card::after { content:""; position:absolute; top:1.2rem; right:1.2rem; width:30px; height:30px; background:var(--ink); }
+  .c1::after, .c3::after { background:var(--paper); }
+  .m0::after { border-radius:50%; } .m2::after { clip-path:polygon(50% 0,100% 100%,0 100%); }
+  .card h2 { font-family:"Gothic A1",sans-serif; font-weight:800; font-size:clamp(1.25rem,2.3vw,1.6rem);
+    line-height:1.3; letter-spacing:-.01em; word-break:keep-all; overflow-wrap:anywhere; padding-right:2.6rem; margin-bottom:.5rem; }
+  .meta { margin:0 0 .75rem; font-size:.9rem; font-weight:700; opacity:.8; }
+  .article-summary, .article-full { margin:0 0 .75rem; max-width:62ch; }
+  .article-full { white-space:pre-line; }
+  .actions { display:flex; gap:1.25rem; align-items:center; flex-wrap:wrap; margin-top:.5rem; }
+  .expand { box-shadow:3px 3px 0 rgba(0,0,0,.3); }
+  a.read { color:inherit; font-weight:700; text-decoration:underline; text-decoration-thickness:3px; text-underline-offset:4px; }
+  a.read:hover { background:var(--ink); color:var(--paper); text-decoration:none; }
+  .c1 a.read:hover, .c3 a.read:hover { background:var(--paper); color:var(--ink); }
+
+  .korean-word { cursor:pointer; border-radius:4px; }
+  .korean-word:hover { background:var(--ink); color:var(--paper); }
+  .c1 .korean-word:hover, .c3 .korean-word:hover { background:var(--paper); color:var(--ink); }
+  /* Translation label that stays above the word */
+  .korean-word { ruby-align:center; }
+  .korean-word rt { font-family:"Gothic A1",sans-serif; font-weight:800; font-size:.6em; line-height:1.2; white-space:nowrap;
+    background:var(--ink); color:var(--paper); border-radius:.45em; padding:.05em .45em; margin-bottom:.2em; }
+  .korean-word rt { -webkit-user-select:none; user-select:none; }
+  ::selection { background:var(--gold); color:var(--ink); }
+  .sel-note { position:absolute; z-index:50; display:flex; align-items:flex-start; gap:.6rem; max-width:min(360px,calc(100vw - 16px));
+    background:var(--ink); color:var(--paper); font-weight:700; line-height:1.35; padding:.5rem .6rem .5rem .9rem;
+    border-radius:12px; box-shadow:4px 4px 0 var(--gold); }
+  .sel-note-x { background:transparent; color:var(--paper); border:0; font-size:1.2rem; line-height:1; cursor:pointer; padding:0 .2rem; }
+  .sel-note-x:focus-visible { outline:3px solid var(--blue); outline-offset:2px; }
+
+  .empty { grid-column:1/-1; font-size:1.2rem; }
+  /* Trending searches */
+  .trending { max-width:1080px; margin:0 auto; padding:2.25rem 1.5rem 0; }
+  .trending h2 { font-family:"Gothic A1",sans-serif; font-weight:800; font-size:1.3rem; margin:0 0 1rem; }
+  .trending ol { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:.8rem; }
+  .chip { display:inline-flex; align-items:center; gap:.6rem; padding:.4rem .95rem .4rem .45rem; background:var(--paper); color:var(--ink);
+    border:3px solid var(--ink); border-radius:999px; box-shadow:3px 3px 0 var(--ink); font-weight:700; text-decoration:none; }
+  .chip:hover, .chip:focus-visible, .chip.active { background:var(--gold); }
+  .chip:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
+  .chip:active { transform:translate(3px,3px); box-shadow:none; }
+  .chip .rank { display:grid; place-items:center; width:1.8rem; height:1.8rem; border-radius:50%; background:var(--ink); color:var(--paper); font-size:.9rem; }
+  .trending li:nth-child(-n+3) .rank { background:var(--red); color:#fff; }
+  .chip small { font-weight:400; opacity:.7; }
+
+  /* Saved words panel */
+  .vocab-toggle { position:fixed; right:1.25rem; bottom:1.25rem; z-index:45; display:flex; align-items:center; gap:.6rem;
+    font-family:"Gothic A1",sans-serif; font-weight:800; font-size:1rem; cursor:pointer; color:#fff; background:var(--red);
+    border:3px solid var(--ink); border-radius:999px; padding:.65rem 1.1rem; box-shadow:4px 4px 0 var(--ink); }
+  .vocab-toggle:active { transform:translate(4px,4px); box-shadow:none; }
+  .vocab-toggle:focus-visible, .vocab button:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
+  .vocab-badge { background:var(--paper); color:var(--ink); border-radius:999px; min-width:1.6em; padding:0 .45em; text-align:center; }
+  .vocab { position:fixed; right:1.25rem; bottom:5rem; z-index:45; width:min(360px,calc(100vw - 2.5rem));
+    max-height:min(60vh,520px); display:flex; flex-direction:column; background:var(--paper); color:var(--ink);
+    border:3px solid var(--ink); border-radius:22px; box-shadow:8px 8px 0 var(--ink); overflow:hidden; }
+  .vocab-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 1.25rem; background:var(--gold);
+    border-bottom:3px solid var(--ink); }
+  .vocab-head h2 { font-family:"Gothic A1",sans-serif; font-weight:800; font-size:1.2rem; margin:0; }
+  .vocab-clear { font:inherit; font-weight:700; font-size:.9rem; background:transparent; color:var(--ink); border:2px solid var(--ink);
+    border-radius:999px; padding:.15rem .8rem; cursor:pointer; }
+  .vocab-clear:hover { background:var(--ink); color:var(--paper); }
+  #vocabList { list-style:none; margin:0; padding:0; overflow-y:auto; }
+  #vocabList li { display:grid; grid-template-columns:1fr auto; gap:0 .75rem; align-items:center; padding:.7rem 1.25rem;
+    border-bottom:2px solid rgba(43,10,7,.15); }
+  #vocabList li strong { font-size:1.1rem; grid-column:1; }
+  #vocabList li span { grid-column:1; opacity:.85; }
+  .vocab-x { grid-column:2; grid-row:1 / span 2; font-size:1.4rem; line-height:1; width:2rem; height:2rem; border-radius:50%;
+    background:transparent; color:var(--ink); border:2px solid var(--ink); cursor:pointer; }
+  .vocab-x:hover { background:var(--red); color:#fff; }
+  #vocabList li.vocab-empty { display:block; opacity:.8; border-bottom:0; padding:1.25rem; }
+
+
+  @media (max-width:640px) { .s2,.s4 { display:none; } .search button { padding:.6rem 1rem; } }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="shape s1"></div><div class="shape s2"></div><div class="shape s3"></div><div class="shape s4"></div>
+  <div class="inner">
+    <h1>뉴스</h1>
+    <p class="lede">Read today's Korean news. Tap any word to translate it.</p>
+    <form action="/" method="get" class="search">
+      <input type="search" name="q" value="{{ q }}" placeholder="Search a keyword…" autocomplete="off" aria-label="Search keyword">
+      <button type="submit">Search</button>
+    </form>
+  </div>
+</header>
+
+{% if trending %}
+<section class="trending" aria-labelledby="trendingTitle">
+  <h2 id="trendingTitle">Trending in Korea</h2>
+  <ol>
+    {% for t in trending %}
+    <li><a class="chip{% if t.query == q %} active{% endif %}" href="/?q={{ t.query|urlencode }}">
+      <span class="rank">{{ loop.index }}</span><span>{{ t.query }}</span>{% if t.traffic %}<small>{{ t.traffic }}</small>{% endif %}
+    </a></li>
+    {% endfor %}
+  </ol>
+</section>
+{% endif %}
+
+<main>
+  {% for a in articles %}
+  <article class="card c{{ loop.index0 % 5 }} m{{ loop.index0 % 3 }}">
+    <h2>{{ a.title }}</h2>
+    <p class="meta text-sm text-gray-500">{{ a.published }}</p>
+    <div class="body">
+      <p class="article-summary">{{ a.summary }}</p>
+      <div class="article-full hidden"></div>
+      <div class="actions">
+        <button class="expand" data-url="{{ a.link }}" onclick="toggleArticle(this)">Expand</button>
+        <a class="read" href="{{ a.link }}" target="_blank" rel="noopener">Read original</a>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+  {% if not articles %}<p class="empty">No articles found for "{{ q }}". Try another keyword.</p>{% endif %}
+</main>
+
+<div class="sel-note hidden" id="selNote" role="status">
+  <span id="selNoteText"></span>
+  <button type="button" class="sel-note-x" aria-label="Close translation" onclick="hideSelNote()">×</button>
+</div>
+
+<button class="vocab-toggle" id="vocabToggle" type="button" aria-expanded="false" aria-controls="vocabPanel" onclick="toggleVocab()">
+  My words <span class="vocab-badge" id="vocabCount">0</span>
+</button>
+<aside class="vocab hidden" id="vocabPanel" aria-label="Saved words">
+  <div class="vocab-head">
+    <h2>My words</h2>
+    <button class="vocab-clear" type="button" onclick="clearVocab()">Clear all</button>
+  </div>
+  <ul id="vocabList"></ul>
+</aside>
+
+
+<script>
+function cleanWord(w){ return w.replace(/[.,!?;:()"“”‘’。，！？：；]/g,"").trim(); }
+
+const clientCache = new Map();
+
+function setNote(el, text){
+  let rt = el.querySelector("rt");
+  if(!rt){ rt = document.createElement("rt"); el.appendChild(rt); }
+  rt.textContent = text;
+}
+function clearNote(el){
+  const rt = el.querySelector("rt");
+  if(rt) rt.remove();
+}
+
+async function translateWord(word, el){
+  if(el.dataset.loading) return;
+  // Clicking an already-translated word hides its translation again
+  if(el.querySelector("rt")){ clearNote(el); return; }
+
+  if(clientCache.has(word)){
+    const t = clientCache.get(word);
+    setNote(el, t); addWord(word, t);
+    return;
+  }
+
+  el.dataset.loading = "1";
+  setNote(el, "…");
+  try{
+    const res = await fetch(`/translate?word=${encodeURIComponent(word)}`);
+    if(!res.ok) throw new Error("Translation failed");
+    const t = (await res.json()).translation;
+    if(!t) throw new Error("Empty translation");
+    clientCache.set(word, t);
+    setNote(el, t);
+    addWord(word, t);
+  }catch(e){
+    console.error(e);
+    setNote(el, "busy, retry");
+    setTimeout(()=>clearNote(el), 2500);
+  }finally{
+    delete el.dataset.loading;
+  }
+}
+
+function makeWordsClickable(el){
+  if(el.dataset.processed) return;
+  el.dataset.processed="true";
+  const words=el.innerText.split(/(\s+)/);
+  el.innerHTML="";
+  words.forEach(word=>{
+    if(word===""||/^\s+$/.test(word)){ el.appendChild(document.createTextNode(word)); return; }
+    const span=document.createElement("ruby");
+    span.innerText=word; span.className="korean-word";
+    span.addEventListener("click",ev=>{
+      ev.stopPropagation();
+      if(ev.detail>1) return;                       // double-click selects instead
+      if(window.getSelection().toString().trim()) return;  // a drag selection is handled separately
+      const clean=cleanWord(word);
+      if(clean) translateWord(clean,span);
+    });
+    el.appendChild(span);
+  });
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  document.querySelectorAll("main h2, main p").forEach(el=>{
+    if(el.classList.contains("text-sm")&&el.classList.contains("text-gray-500")) return;
+    if(el.classList.contains("empty")) return;
+    makeWordsClickable(el);
+  });
+});
+
+const VOCAB_KEY="koreanNewsVocab";
+let vocab=[];
+try{ vocab=JSON.parse(localStorage.getItem(VOCAB_KEY)||"[]"); }catch(e){ vocab=[]; }
+
+function saveVocab(){ try{ localStorage.setItem(VOCAB_KEY,JSON.stringify(vocab)); }catch(e){} }
+function addWord(ko,en){
+  if(!ko||!en) return;
+  vocab=vocab.filter(w=>w.ko!==ko);
+  vocab.unshift({ko,en});
+  saveVocab(); renderVocab();
+}
+function removeWord(ko){ vocab=vocab.filter(w=>w.ko!==ko); saveVocab(); renderVocab(); }
+function clearVocab(){ vocab=[]; saveVocab(); renderVocab(); }
+
+function renderVocab(){
+  document.getElementById("vocabCount").textContent=vocab.length;
+  const list=document.getElementById("vocabList");
+  list.innerHTML="";
+  if(!vocab.length){
+    const li=document.createElement("li");
+    li.className="vocab-empty";
+    li.textContent="Tap a word in an article and it will be saved here.";
+    list.appendChild(li);
+    return;
+  }
+  vocab.forEach(w=>{
+    const li=document.createElement("li");
+    const ko=document.createElement("strong"); ko.textContent=w.ko;
+    const en=document.createElement("span");   en.textContent=w.en;
+    const x=document.createElement("button");
+    x.type="button"; x.className="vocab-x"; x.textContent="×";
+    x.setAttribute("aria-label","Remove "+w.ko);
+    x.addEventListener("click",()=>removeWord(w.ko));
+    li.append(ko,en,x);
+    list.appendChild(li);
+  });
+}
+function toggleVocab(){
+  const panel=document.getElementById("vocabPanel");
+  const hidden=panel.classList.toggle("hidden");
+  document.getElementById("vocabToggle").setAttribute("aria-expanded",String(!hidden));
+}
+document.addEventListener("DOMContentLoaded",renderVocab);
+
+const HANGUL=/[\u3131-\u318E\uAC00-\uD7A3]/;
+const EDGE_PUNCT=/^[\s.,!?;:()"“”‘’。，！？：；]+|[\s.,!?;:()"“”‘’。，！？：；]+$/g;
+const selNote=document.getElementById("selNote");
+const selNoteText=document.getElementById("selNoteText");
+let mouseDown=false, lastSelKey="", selToken=0, selTimer=null;
+
+function hideSelNote(){ selNote.classList.add("hidden"); lastSelKey=""; selToken++; }
+
+async function getTranslation(text){
+  if(clientCache.has(text)) return clientCache.get(text);
+  const res=await fetch(`/translate?word=${encodeURIComponent(text)}`);
+  if(!res.ok) throw new Error("Translation failed");
+  const t=(await res.json()).translation;
+  if(!t) throw new Error("Empty translation");
+  clientCache.set(text,t);
+  return t;
+}
+
+function readSelection(){
+  const sel=window.getSelection();
+  if(!sel||sel.isCollapsed||!sel.rangeCount) return null;
+  const range=sel.getRangeAt(0);
+  const node=range.commonAncestorContainer;
+  const host=node.nodeType===1?node:node.parentElement;
+  if(!host||!host.closest("main")) return null;
+  const frag=range.cloneContents();
+  frag.querySelectorAll("rt").forEach(n=>n.remove());   // ignore translation labels
+  const text=frag.textContent.replace(/\s+/g," ").replace(EDGE_PUNCT,"");
+  return text?{text,range}:null;
+}
+
+// Rect of the first visible selected character (skips line-break whitespace and translation labels)
+function firstCharRect(range){
+  const root=range.commonAncestorContainer;
+  const walker=document.createTreeWalker(root.nodeType===1?root:root.parentNode,NodeFilter.SHOW_TEXT);
+  let node;
+  while((node=walker.nextNode())){
+    if(!range.intersectsNode(node)) continue;
+    if(node.parentElement&&node.parentElement.closest("rt")) continue;
+    const text=node.textContent;
+    const start=node===range.startContainer?range.startOffset:0;
+    const end=node===range.endContainer?range.endOffset:text.length;
+    for(let i=start;i<end;i++){
+      if(/\S/.test(text[i])){
+        const r=document.createRange();
+        r.setStart(node,i); r.setEnd(node,i+1);
+        const rect=r.getClientRects()[0];
+        if(rect) return rect;
+      }
+    }
+  }
+  return range.getBoundingClientRect();
+}
+
+function placeSelNote(range){
+  const first=firstCharRect(range);
+  selNote.classList.remove("hidden");
+  const w=selNote.offsetWidth, h=selNote.offsetHeight;
+  const left=Math.max(8,Math.min(first.left+window.scrollX,window.scrollX+window.innerWidth-w-8));
+  let top=first.top+window.scrollY-h-10;
+  if(first.top-h-10<0) top=range.getBoundingClientRect().bottom+window.scrollY+10;  // no room above: go below
+  selNote.style.left=left+"px";
+  selNote.style.top=top+"px";
+}
+
+async function handleSelection(){
+  const info=readSelection();
+  if(!info||!HANGUL.test(info.text)) return;
+  if(info.text===lastSelKey && !selNote.classList.contains("hidden")) return;
+  lastSelKey=info.text;
+  const range=info.range.cloneRange();
+  const token=++selToken;
+
+  if(info.text.length>500){
+    selNoteText.textContent="Selection too long (500 characters max).";
+    placeSelNote(range);
+    return;
+  }
+  selNoteText.textContent="…";
+  placeSelNote(range);
+  try{
+    const t=await getTranslation(info.text);
+    if(token!==selToken) return;            // a newer selection took over
+    selNoteText.textContent=t;
+    placeSelNote(range);
+    addWord(info.text,t);
+  }catch(e){
+    console.error(e);
+    if(token!==selToken) return;
+    selNoteText.textContent="Translator is busy. Select again in a few seconds.";
+    placeSelNote(range);
+    lastSelKey="";
+  }
+}
+
+document.addEventListener("mousedown",ev=>{
+  mouseDown=true;
+  if(!selNote.contains(ev.target)) hideSelNote();
+});
+document.addEventListener("mouseup",ev=>{
+  mouseDown=false;
+  if(selNote.contains(ev.target)) return;
+  setTimeout(handleSelection,0);              // let the browser finalise the selection
+});
+// Touch screens: selection handles don't fire mouseup, so also react once the selection settles
+document.addEventListener("selectionchange",()=>{
+  clearTimeout(selTimer);
+  selTimer=setTimeout(()=>{ if(!mouseDown) handleSelection(); },800);
+});
+document.addEventListener("keydown",ev=>{ if(ev.key==="Escape") hideSelNote(); });
+window.addEventListener("resize",hideSelNote);
+
+async function toggleArticle(button){
+  hideSelNote();
+  const box=button.closest(".body");
+  const summary=box.querySelector(".article-summary");
+  const full=box.querySelector(".article-full");
+  if(!full.classList.contains("hidden")){
+    full.classList.add("hidden"); summary.classList.remove("hidden"); button.innerText="Expand"; return;
+  }
+  if(full.dataset.loaded==="true"){
+    summary.classList.add("hidden"); full.classList.remove("hidden"); button.innerText="Collapse"; return;
+  }
+  button.innerText="Loading...";
+  try{
+    const res=await fetch(`/article?url=${encodeURIComponent(button.dataset.url)}`);
+    if(!res.ok) throw new Error("Failed to load article");
+    const data=await res.json();
+    if(!data.article) throw new Error("No article content found");
+    full.innerText=data.article;
+    makeWordsClickable(full);
+    full.dataset.loaded="true";
+    summary.classList.add("hidden"); full.classList.remove("hidden"); button.innerText="Collapse";
+  }catch(e){
+    console.error(e); button.innerText="Expand"; alert("Unable to load the full article.");
+  }
+}
+</script>
+</body>
+</html>
