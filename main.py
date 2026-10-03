@@ -30,10 +30,27 @@ def get_news(keyword="삼성전자", limit=10):
         + quote_plus(keyword)
         + "&hl=ko&gl=KR&ceid=KR:ko"
     )
-    headers = {...}  # keep yours
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/140.0.0.0 Safari/537.36"
+        ),
+        "Accept": (
+            "application/rss+xml, application/xml, "
+            "text/xml, text/html;q=0.9, */*;q=0.8"
+        ),
+    }
 
     try:
-        response = requests.get(rss_url, headers=headers, timeout=15)
+        response = requests.get(
+            rss_url,
+            headers=headers,
+            timeout=15,
+            allow_redirects=True,
+        )
+        print("NEWS STATUS:", response.status_code)
         response.raise_for_status()
     except requests.RequestException as e:
         print("News fetch error:", e)
@@ -41,9 +58,25 @@ def get_news(keyword="삼성전자", limit=10):
         return cached["items"][:limit] if cached else []
 
     feed = feedparser.parse(response.content)
-    articles = [...]  # your existing loop
 
-    news_cache[keyword] = {"time": now, "items": articles}
+    articles = []
+    for entry in feed.entries[:limit]:
+        raw_summary = entry.get("summary", "")
+        summary = BeautifulSoup(raw_summary, "html.parser").get_text(
+            separator=" ", strip=True
+        )
+        source = entry.get("source", {})
+
+        articles.append({
+            "title": entry.get("title", ""),
+            "link": entry.get("link", ""),
+            "published": entry.get("published", ""),
+            "summary": summary,
+            "source": source.get("title", ""),
+        })
+
+    if articles:
+        news_cache[keyword] = {"time": now, "items": articles}
     return articles
 
 @app.get("/")
