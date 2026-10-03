@@ -17,73 +17,33 @@ app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
 
+news_cache = {}  # {keyword: {"time": float, "items": list}}
+
 def get_news(keyword="삼성전자", limit=10):
+    now = time.time()
+    cached = news_cache.get(keyword)
+    if cached and now - cached["time"] < 300:  # 5 min
+        return cached["items"][:limit]
+
     rss_url = (
         "https://news.google.com/rss/search?q="
         + quote_plus(keyword)
         + "&hl=ko&gl=KR&ceid=KR:ko"
     )
+    headers = {...}  # keep yours
 
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/140.0.0.0 Safari/537.36"
-        ),
-        "Accept": (
-            "application/rss+xml, application/xml, "
-            "text/xml, text/html;q=0.9, */*;q=0.8"
-        ),
-    }
-
-    print("NEWS URL:", rss_url)
-
-    response = requests.get(
-        rss_url,
-        headers=headers,
-        timeout=15,
-        allow_redirects=True,
-    )
-
-    print("NEWS STATUS:", response.status_code)
-    print("NEWS FINAL URL:", response.url)
-    print("NEWS CONTENT TYPE:", response.headers.get("content-type"))
-    print("NEWS BYTES:", len(response.content))
-
-    response.raise_for_status()
+    try:
+        response = requests.get(rss_url, headers=headers, timeout=15)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print("News fetch error:", e)
+        # Serve stale results if we have them, otherwise an empty list
+        return cached["items"][:limit] if cached else []
 
     feed = feedparser.parse(response.content)
+    articles = [...]  # your existing loop
 
-    print("NEWS FEED BOZO:", feed.bozo)
-    print("NEWS ENTRIES:", len(feed.entries))
-
-    if feed.bozo:
-        print("NEWS FEED ERROR:", getattr(feed, "bozo_exception", None))
-
-    articles = []
-
-    for entry in feed.entries[:limit]:
-
-        raw_summary = entry.get("summary", "")
-
-        summary = BeautifulSoup(
-            raw_summary,
-            "html.parser"
-        ).get_text(
-            separator=" ",
-            strip=True
-        )
-
-        source = entry.get("source", {})
-
-        articles.append({
-            "title": entry.get("title", ""),
-            "link": entry.get("link", ""),
-            "published": entry.get("published", ""),
-            "summary": summary,
-            "source": source.get("title", ""),
-        })
-
+    news_cache[keyword] = {"time": now, "items": articles}
     return articles
 
 @app.get("/")
